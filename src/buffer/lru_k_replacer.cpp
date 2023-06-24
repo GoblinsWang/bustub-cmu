@@ -61,7 +61,7 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
   }
 
   access_count_[frame_id]++;
-  // 当frame_id的访问次数达到k
+  // 当frame_id的访问次数达到k，从his - > cache
   if (access_count_[frame_id] == k_) {
     auto it = history_map_[frame_id];
     history_list_.erase(it);
@@ -70,6 +70,7 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
     cache_list_.push_front(frame_id);
     cache_map_[frame_id] = cache_list_.begin();
   } else if (access_count_[frame_id] > k_) {
+    // 已经存在，则从链表中移除，重新放在队头
     if (cache_map_.count(frame_id) != 0U) {
       auto it = cache_map_[frame_id];
       cache_list_.erase(it);
@@ -77,6 +78,7 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id) {
     cache_list_.push_front(frame_id);
     cache_map_[frame_id] = cache_list_.begin();
   } else {
+    // 其他情况也就是没有到k，分为两种情况：a. 还没有进his; b. 已经在his中，这种情况不做处理
     if (history_map_.count(frame_id) == 0U) {
       history_list_.push_front(frame_id);
       history_map_[frame_id] = history_list_.begin();
@@ -93,7 +95,7 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
   if (access_count_[frame_id] == 0) {
     return;
   }
-
+  // 需要更新根据具体情况cur_size，其表示的是可被移除的frame_id数量
   if (!is_evictable_[frame_id] && set_evictable) {
     curr_size_++;
   }
@@ -110,13 +112,16 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {
     throw std::exception();
   }
 
+  // 不存在
   auto cnt = access_count_[frame_id];
   if (cnt == 0) {
     return;
   }
+  // 不可以移除则抛出异常
   if (!is_evictable_[frame_id]) {
     throw std::exception();
   }
+  // 通过cnt判断在his还是cache中
   if (cnt < k_) {
     history_list_.erase(history_map_[frame_id]);
     history_map_.erase(frame_id);
