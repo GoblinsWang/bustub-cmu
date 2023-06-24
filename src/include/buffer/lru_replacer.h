@@ -48,6 +48,7 @@ class LRUReplacer : public Replacer {
 
  private:
   // TODO(student): implement me!
+  size_t replace_size_;
   std::list<frame_id_t> cache_list_;
   std::unordered_map<frame_id_t, std::list<frame_id_t>::iterator> cache_map_;
   std::mutex data_latch_;

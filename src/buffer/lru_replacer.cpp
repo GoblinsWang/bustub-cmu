@@ -14,7 +14,7 @@
 
 namespace bustub {
 
-LRUReplacer::LRUReplacer(size_t num_pages) {}
+LRUReplacer::LRUReplacer(size_t num_pages) : replace_size_(num_pages) {}
 
 LRUReplacer::~LRUReplacer() = default;
 
@@ -23,9 +23,8 @@ auto LRUReplacer::Victim(frame_id_t *frame_id) -> bool {
   if (cache_map_.empty()) {
     return false;
   }
-  // 把最前头的删掉
-  *frame_id = cache_list_.front();
-  cache_list_.pop_front();
+  *frame_id = *cache_list_.rbegin();  // 删除尾部的
+  cache_list_.pop_back();
   cache_map_.erase(*frame_id);
 
   return true;
@@ -33,6 +32,8 @@ auto LRUReplacer::Victim(frame_id_t *frame_id) -> bool {
 
 void LRUReplacer::Pin(frame_id_t frame_id) {
   std::scoped_lock<std::mutex> lock(data_latch_);
+  if (frame_id > static_cast<int>(replace_size_)) throw std::exception();
+
   auto it = cache_map_.find(frame_id);
   if (it != cache_map_.end()) {
     cache_list_.erase(cache_map_[frame_id]);
@@ -42,10 +43,12 @@ void LRUReplacer::Pin(frame_id_t frame_id) {
 
 void LRUReplacer::Unpin(frame_id_t frame_id) {
   std::scoped_lock<std::mutex> lock(data_latch_);
+  if (frame_id > static_cast<int>(replace_size_)) throw std::exception();
+
   auto it = cache_map_.find(frame_id);
   if (it == cache_map_.end()) {
-    cache_list_.push_back(frame_id);
-    cache_map_[frame_id] = prev(cache_list_.end());
+    cache_list_.push_front(frame_id);
+    cache_map_[frame_id] = cache_list_.begin();
   }
   // 在的话，就不用管了
 }
